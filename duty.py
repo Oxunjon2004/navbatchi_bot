@@ -30,6 +30,7 @@ def admin_keyboard():
     markup.add(KeyboardButton("Guruhga xabar yuborish"))
     markup.add(KeyboardButton("Navbatchilar ro'yxatini ko'rish"))
     markup.add(KeyboardButton("Bugungi navbatchini bilish"))
+    markup.add(KeyboardButton("Guruhga navbatchini yuborish"))  # Yangi tugma qo'shildi
     return markup
 
 # Foydalanuvchilar uchun tugmalar (hammaga ko'rinadi)
@@ -90,6 +91,21 @@ async def get_today_duty(message: types.Message):
     else:
         await message.reply("Hozircha navbatchi belgilanmagan.")
 
+# "Guruhga navbatchini yuborish" tugmasi (faqat adminlar uchun ko'rinadi)
+@dp.message_handler(lambda message: message.text == "Guruhga navbatchini yuborish")
+async def send_duty_to_group(message: types.Message):
+    global current_duty
+    if await is_authorized(message.from_user.id):
+        if current_duty:
+            try:
+                duty_message = f"{current_duty}, siz bugungi navbatchisiz."
+                await bot.send_message(GROUP_ID, duty_message)  # Navbatchini guruhga yuborish
+                await message.reply("Bugungi navbatchi guruhga yuborildi.")
+            except ChatNotFound:
+                await message.reply("Guruh topilmadi.")
+        else:
+            await message.reply("Hozircha navbatchi belgilanmagan.")
+
 # Har kuni ertalab navbatchilarni e'lon qilish funksiyasi
 async def daily_announcement():
     global current_duty
@@ -103,7 +119,6 @@ async def daily_announcement():
             logging.error("Guruh topilmadi")
     else:
         logging.error("Navbatchilar ro'yxati bo'sh.")
-
 # Botni ishga tushirishda avtomatik ravishda jadval sozlash va birinchi marta chaqirish
 async def on_startup(_):
     # Birinchi marta navbatchini avtomatik belgilash uchun chaqiramiz
