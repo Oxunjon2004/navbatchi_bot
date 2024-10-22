@@ -18,7 +18,7 @@ dp = Dispatcher(bot)
 scheduler = AsyncIOScheduler()
 
 # Oldindan belgilangan navbatchilar ro'yxati
-duty_list = ['Oxunjon', 'Samandar', 'Ziyodulla', 'Iftihor']
+duty_list = ['Iftihor', 'Ziyodulla', 'Oxunjon', 'Samandar']
 
 # Hozirgi navbatchini belgilash uchun o'zgaruvchi
 current_duty = None
@@ -124,7 +124,7 @@ async def on_startup(_):
     # Birinchi marta navbatchini avtomatik belgilash uchun chaqiramiz
     await daily_announcement()
 
-    scheduler.add_job(daily_announcement, 'cron', hour=18, minute=0, timezone=tz)  
+    scheduler.add_job(daily_announcement, 'cron', hour=9, minute=0)  
     scheduler.start()
 
 logging.basicConfig(level=logging.INFO)
