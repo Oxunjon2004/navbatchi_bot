@@ -124,7 +124,7 @@ async def on_startup(_):
     # Birinchi marta navbatchini avtomatik belgilash uchun chaqiramiz
     await daily_announcement()
 
-    scheduler.add_job(daily_announcement, 'cron', hour=9, minute=0)  
+    scheduler.add_job(daily_announcement, 'cron', hour=18, minute=0, timezone=tz)  
     scheduler.start()
 
 logging.basicConfig(level=logging.INFO)
