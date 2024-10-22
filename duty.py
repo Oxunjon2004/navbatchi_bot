@@ -18,7 +18,7 @@ dp = Dispatcher(bot)
 scheduler = AsyncIOScheduler()
 
 # Oldindan belgilangan navbatchilar ro'yxati
-duty_list = ['Iftihor', 'Ziyodulla', 'Oxunjon', 'Samandar']
+duty_list = ['Ziyodulla', 'Oxunjon', 'Samandar','Iftihor']
 
 # Hozirgi navbatchini belgilash uchun o'zgaruvchi
 current_duty = None
@@ -26,18 +26,26 @@ current_duty = None
 # Adminlar uchun barcha tugmalar
 def admin_keyboard():
     markup = ReplyKeyboardMarkup(resize_keyboard=True)
-    markup.add(KeyboardButton("Admin bilan bog'lanish"))
-    markup.add(KeyboardButton("Guruhga xabar yuborish"))
-    markup.add(KeyboardButton("Navbatchilar ro'yxatini ko'rish"))
-    markup.add(KeyboardButton("Bugungi navbatchini bilish"))
-    markup.add(KeyboardButton("Guruhga navbatchini yuborish"))  # Yangi tugma qo'shildi
+    markup.add(KeyboardButton("📞 Admin bilan bog'lanish"))
+    markup.add(KeyboardButton("✉️ Guruhga xabar yuborish"))
+    markup.add(KeyboardButton("📋 Navbatchilar ro'yxatini ko'rish"))
+    markup.add(KeyboardButton("✅ Bugungi navbatchini bilish"))
+    markup.add(KeyboardButton("📤 Guruhga navbatchini yuborish"))  # Yangi tugma qo'shildi
     return markup
 
 # Foydalanuvchilar uchun tugmalar (hammaga ko'rinadi)
 def user_keyboard():
     markup = ReplyKeyboardMarkup(resize_keyboard=True)
-    markup.add(KeyboardButton("Admin bilan bog'lanish"))
-    markup.add(KeyboardButton("Bugungi navbatchini bilish"))
+    markup.add(KeyboardButton("📞 Admin bilan bog'lanish"))
+    markup.add(KeyboardButton("✅ Bugungi navbatchini bilish"))
+    return markup
+
+# Navbatchilarni ko'rsatadigan tugmalar
+def duty_keyboard():
+    markup = ReplyKeyboardMarkup(resize_keyboard=True)
+    for duty in duty_list:
+        markup.add(KeyboardButton(duty))  # Har bir navbatchi uchun tugma
+    markup.add(KeyboardButton("🔙 Asosiy menyuga qaytish"))  # Asosiy menyuga qaytish tugmasi
     return markup
 
 # Faqat admin foydalanishi uchun tekshiruv funksiyasi
@@ -53,12 +61,12 @@ async def send_welcome(message: types.Message):
         await message.reply("Xush kelibsiz! Sizga quyidagi tugmalar ko'rsatiladi.", reply_markup=user_keyboard())
 
 # "Admin bilan bog'lanish" tugmasi
-@dp.message_handler(lambda message: message.text == "Admin bilan bog'lanish")
+@dp.message_handler(lambda message: message.text == "📞 Admin bilan bog'lanish")
 async def contact_admin(message: types.Message):
     await message.reply(f"Bot adminiga murojaat qilish uchun quyidagi linkdan foydalaning: https://t.me/Qoqonlik_02")
 
 # "Guruhga xabar yuborish" tugmasi bosilganda
-@dp.message_handler(lambda message: message.text == "Guruhga xabar yuborish")
+@dp.message_handler(lambda message: message.text == "✉️ Guruhga xabar yuborish")
 async def ask_for_group_message(message: types.Message):
     if await is_authorized(message.from_user.id):
         await message.reply("Guruhga yuboriladigan xabarni kiriting.")
@@ -74,7 +82,7 @@ async def send_group_message(message: types.Message):
             await message.reply("Guruh topilmadi.")
 
 # "Navbatchilar ro'yxatini ko'rish" tugmasi
-@dp.message_handler(lambda message: message.text == "Navbatchilar ro'yxatini ko'rish")
+@dp.message_handler(lambda message: message.text == "📋 Navbatchilar ro'yxatini ko'rish")
 async def view_duty_list(message: types.Message):
     if await is_authorized(message.from_user.id):
         if not duty_list:
@@ -83,7 +91,7 @@ async def view_duty_list(message: types.Message):
             await message.reply("Navbatchilar ro'yxati:\n" + "\n".join(duty_list))
 
 # "Bugungi navbatchini bilish" tugmasi (hammaga ko'rinadi)
-@dp.message_handler(lambda message: message.text == "Bugungi navbatchini bilish")
+@dp.message_handler(lambda message: message.text == "✅ Bugungi navbatchini bilish")
 async def get_today_duty(message: types.Message):
     global current_duty
     if current_duty:
@@ -91,20 +99,29 @@ async def get_today_duty(message: types.Message):
     else:
         await message.reply("Hozircha navbatchi belgilanmagan.")
 
-# "Guruhga navbatchini yuborish" tugmasi (faqat adminlar uchun ko'rinadi)
-@dp.message_handler(lambda message: message.text == "Guruhga navbatchini yuborish")
-async def send_duty_to_group(message: types.Message):
-    global current_duty
+# "Guruhga navbatchini yuborish" tugmasi bosilganda navbatchilar ro'yxati chiqadi
+@dp.message_handler(lambda message: message.text == "📤 Guruhga navbatchini yuborish")
+async def select_duty(message: types.Message):
     if await is_authorized(message.from_user.id):
-        if current_duty:
-            try:
-                duty_message = f"{current_duty}, siz bugungi navbatchisiz."
-                await bot.send_message(GROUP_ID, duty_message)  # Navbatchini guruhga yuborish
-                await message.reply("Bugungi navbatchi guruhga yuborildi.")
-            except ChatNotFound:
-                await message.reply("Guruh topilmadi.")
-        else:
-            await message.reply("Hozircha navbatchi belgilanmagan.")
+        await message.reply("Qaysi navbatchini yubormoqchisiz?", reply_markup=duty_keyboard())
+
+# Tanlangan navbatchini guruhga yuborish
+@dp.message_handler(lambda message: message.text in duty_list)
+async def send_selected_duty_to_group(message: types.Message):
+    if await is_authorized(message.from_user.id):
+        selected_duty = message.text  # Tanlangan navbatchi
+        duty_message = f"{selected_duty}, siz bugungi navbatchisiz."
+        try:
+            await bot.send_message(GROUP_ID, duty_message)  # Navbatchini guruhga yuborish
+            await message.reply(f"{selected_duty} guruhga yuborildi.")
+        except ChatNotFound:
+            await message.reply("Guruh topilmadi.")
+
+# "Asosiy menyuga qaytish" tugmasi bosilganda tugmalar o'zgaradi
+@dp.message_handler(lambda message: message.text == "🔙 Asosiy menyuga qaytish")
+async def back_to_main_menu(message: types.Message):
+    if await is_authorized(message.from_user.id):
+        await message.reply("Asosiy menyuga qaytildi.", reply_markup=admin_keyboard())
 
 # Har kuni ertalab navbatchilarni e'lon qilish funksiyasi
 async def daily_announcement():
@@ -119,12 +136,14 @@ async def daily_announcement():
             logging.error("Guruh topilmadi")
     else:
         logging.error("Navbatchilar ro'yxati bo'sh.")
+
 # Botni ishga tushirishda avtomatik ravishda jadval sozlash va birinchi marta chaqirish
 async def on_startup(_):
     # Birinchi marta navbatchini avtomatik belgilash uchun chaqiramiz
-    await daily_announcement()
+    # await daily_announcement()
 
-    scheduler.add_job(daily_announcement, 'cron', hour=9, minute=0)  
+    # Har kuni 18:10 da navbatchini guruhga yuborish
+    scheduler.add_job(daily_announcement, 'cron', hour=9, minute=10)  
     scheduler.start()
 
 logging.basicConfig(level=logging.INFO)
